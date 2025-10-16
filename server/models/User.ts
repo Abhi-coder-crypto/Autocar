@@ -9,6 +9,7 @@ const userSchema = new mongoose.Schema({
     enum: ['Admin', 'Inventory Manager', 'Sales Executive', 'HR Manager', 'Service Staff'],
     default: 'Service Staff'
   },
+  mobileNumber: { type: String },
   isActive: { type: Boolean, default: true },
 }, { timestamps: true });
 

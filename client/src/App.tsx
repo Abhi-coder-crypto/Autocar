@@ -12,6 +12,7 @@ import { AuthProvider, useAuth } from "@/lib/auth";
 import Dashboard from "@/pages/Dashboard";
 import Products from "@/pages/Products";
 import Inventory from "@/pages/Inventory";
+import InventoryManagement from "@/pages/InventoryManagement";
 import ServiceVisits from "@/pages/ServiceVisits";
 import Orders from "@/pages/Orders";
 import Employees from "@/pages/Employees";
@@ -44,6 +45,7 @@ const ROUTE_PERMISSIONS: Record<string, { resource: string; action: string } | n
   '/vehicles': null, // Vehicle management is accessible to all authenticated users
   '/products': { resource: 'products', action: 'read' },
   '/inventory': { resource: 'inventory', action: 'read' },
+  '/inventory-management': { resource: 'inventory', action: 'read' },
   '/orders': { resource: 'orders', action: 'read' },
   '/employees': { resource: 'employees', action: 'read' },
   '/attendance': { resource: 'attendance', action: 'read' },
@@ -115,6 +117,9 @@ function Router() {
       </Route>
       <Route path="/inventory">
         {() => <ProtectedRoute component={Inventory} />}
+      </Route>
+      <Route path="/inventory-management">
+        {() => <ProtectedRoute component={InventoryManagement} />}
       </Route>
       <Route path="/visits">
         {() => <ProtectedRoute component={ServiceVisits} />}

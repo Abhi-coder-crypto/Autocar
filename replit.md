@@ -42,6 +42,53 @@ The customer registration flow supports adding multiple vehicles per customer. A
 ### Complete Activity Tracking System
 A comprehensive activity logging system tracks all user actions (CRUD operations on Employees, Products, Orders, Service Visits, Suppliers, Purchase Orders, and user login/logout) with an `ActivityLog` model. An `ActivityFeed` component in the admin dashboard displays real-time activities with role-based badge colors, action-based indicators, resource icons, and "time ago" formatting. API endpoints for fetching and creating activity logs are provided.
 
+### Inventory Management Module (Hierarchical)
+A comprehensive inventory management system with hierarchical product structure for detailed tracking of car accessories and consumables:
+
+**Hierarchical Structure**: Brand → Model → Variant → Product Category → Product Range → Color/Finish
+
+**Data Models**:
+- `Brand`: Vehicle brands (Toyota, Hyundai, Maruti Suzuki)
+- `VehicleModel`: Car models linked to brands (Innova, i20, Baleno)
+- `Variant`: Model variants (Base, Mid, Top, Custom, Standard)
+- `ProductCategory`: Product types (Seat Cover, Floor Padding, Alloy Wheel, Music System)
+- `ProductRange`: Quality/material ranges (Leather, Fabric, Premium, Deluxe)
+- `Vendor`: Supplier management with contact details, GST, payment terms, and outstanding balance tracking
+- `InventoryProduct`: Main inventory product with full hierarchy, stock tracking, pricing, vendor linkage, warehouse location, and auto-generated SKU
+- `StockMovement`: Complete stock transaction history with quantity changes, references, and user tracking
+
+**Core Features**:
+- **Hierarchical Product Entry**: Add products with Brand → Model → Variant → Category → Range → Color structure
+- **Stock Management Service**: Auto-deduction when products are used in sales/service orders
+- **Low Stock Alerts**: SMS notification system (with Twilio integration placeholder) triggers when stock ≤ reorder level
+- **Stock Movement Tracking**: Complete audit trail of all stock changes (purchase, sale, return, adjustment, damage, transfer, restock)
+- **Daily Product Movement Summary**: Aggregated reports of stock changes for any date range
+- **Vendor Management**: Complete vendor details with invoice tracking and payment management
+- **Real-time Stock Monitoring**: Dashboard showing total products, low stock alerts, brands, and vendors
+
+**API Routes** (`/api/inventory/*`):
+- Brands, Models, Variants, Categories, Ranges, Vendors: Full CRUD operations
+- Products: Create, read, update, delete with hierarchical filtering
+- Stock Operations: `/stock/deduct`, `/stock/add`, `/stock/low`
+- Stock Movements: `/movements` with filtering, `/movements/summary/daily`, `/movements/summary`
+
+**Frontend Interface** (`/inventory-management`):
+- **Products Tab**: Search, filter, and manage inventory products with hierarchy display
+- **Hierarchy Setup Tab**: Manage brands, models, variants, categories, and ranges in organized cards
+- **Vendors Tab**: Complete vendor management with contact and financial details
+- **Low Stock Tab**: Alert dashboard with vendor contact information for reordering
+- **Stock Movements Tab**: Complete transaction history with filters
+
+**SMS Alert System**:
+- **Notification Service Abstraction**: `server/services/notificationService.ts` provides SMS, email, and in-app notifications
+- **Twilio Integration Ready**: Placeholder implementation that logs SMS to console when Twilio credentials are not configured
+- **Environment Variables Required**: `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER`
+- **Alert Triggers**: Automatically sends SMS to Admin and Inventory Manager when stock reaches reorder level
+- **Note in replit.md**: SMS functionality requires Twilio credentials to be added as environment variables
+
+**Example Use Case**: 
+Seat Cover (Leather - Red) for Toyota Innova Top Variant with stock of 12 units at ₹4,000 each. System auto-alerts when stock ≤ 5 units, sending SMS to configured Admin and Inventory Manager contacts.
+
 ## External Dependencies
 
 -   **Database**: MongoDB (via Mongoose)

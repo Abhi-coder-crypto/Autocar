@@ -26,6 +26,15 @@ import { requireAuth, requireRole, attachUser, requirePermission } from "./middl
 import { insertCustomerSchema, insertVehicleSchema } from "./schemas";
 import { RegistrationCustomer } from "./models/RegistrationCustomer";
 import { RegistrationVehicle } from "./models/RegistrationVehicle";
+import { Brand } from "./models/Brand";
+import { VehicleModel } from "./models/VehicleModel";
+import { Variant } from "./models/Variant";
+import { ProductCategory } from "./models/ProductCategory";
+import { ProductRange } from "./models/ProductRange";
+import { Vendor } from "./models/Vendor";
+import { InventoryProduct } from "./models/InventoryProduct";
+import { StockMovement } from "./models/StockMovement";
+import { StockService } from "./services/stockService";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   await connectDB();
@@ -2299,6 +2308,586 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(activity);
     } catch (error) {
       res.status(500).json({ error: "Failed to create activity log" });
+    }
+  });
+
+  // ==================== INVENTORY MANAGEMENT ROUTES ====================
+  
+  // Brand Routes
+  app.get("/api/inventory/brands", requireAuth, requirePermission('inventory', 'read'), async (req, res) => {
+    try {
+      const brands = await Brand.find({ isActive: true }).sort({ name: 1 });
+      res.json(brands);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch brands" });
+    }
+  });
+
+  app.post("/api/inventory/brands", requireAuth, requirePermission('inventory', 'create'), async (req, res) => {
+    try {
+      const brand = await Brand.create(req.body);
+      
+      await logActivity({
+        userId: (req as any).session.userId,
+        userName: (req as any).session.userName,
+        userRole: (req as any).session.userRole,
+        action: 'create',
+        resource: 'inventory',
+        resourceId: brand._id.toString(),
+        description: `Created brand: ${brand.name}`,
+        ipAddress: req.ip,
+      });
+      
+      res.json(brand);
+    } catch (error) {
+      res.status(400).json({ error: "Failed to create brand" });
+    }
+  });
+
+  app.put("/api/inventory/brands/:id", requireAuth, requirePermission('inventory', 'update'), async (req, res) => {
+    try {
+      const brand = await Brand.findByIdAndUpdate(req.params.id, req.body, { new: true });
+      if (!brand) {
+        return res.status(404).json({ error: "Brand not found" });
+      }
+      res.json(brand);
+    } catch (error) {
+      res.status(400).json({ error: "Failed to update brand" });
+    }
+  });
+
+  app.delete("/api/inventory/brands/:id", requireAuth, requirePermission('inventory', 'delete'), async (req, res) => {
+    try {
+      const brand = await Brand.findByIdAndUpdate(req.params.id, { isActive: false }, { new: true });
+      if (!brand) {
+        return res.status(404).json({ error: "Brand not found" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      res.status(400).json({ error: "Failed to delete brand" });
+    }
+  });
+
+  // Vehicle Model Routes
+  app.get("/api/inventory/models", requireAuth, requirePermission('inventory', 'read'), async (req, res) => {
+    try {
+      const { brandId } = req.query;
+      const query: any = { isActive: true };
+      if (brandId) {
+        query.brandId = brandId;
+      }
+      const models = await VehicleModel.find(query).populate('brandId', 'name').sort({ brandName: 1, name: 1 });
+      res.json(models);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch models" });
+    }
+  });
+
+  app.post("/api/inventory/models", requireAuth, requirePermission('inventory', 'create'), async (req, res) => {
+    try {
+      const model = await VehicleModel.create(req.body);
+      
+      await logActivity({
+        userId: (req as any).session.userId,
+        userName: (req as any).session.userName,
+        userRole: (req as any).session.userRole,
+        action: 'create',
+        resource: 'inventory',
+        resourceId: model._id.toString(),
+        description: `Created model: ${model.brandName} ${model.name}`,
+        ipAddress: req.ip,
+      });
+      
+      res.json(model);
+    } catch (error) {
+      res.status(400).json({ error: "Failed to create model" });
+    }
+  });
+
+  app.put("/api/inventory/models/:id", requireAuth, requirePermission('inventory', 'update'), async (req, res) => {
+    try {
+      const model = await VehicleModel.findByIdAndUpdate(req.params.id, req.body, { new: true });
+      if (!model) {
+        return res.status(404).json({ error: "Model not found" });
+      }
+      res.json(model);
+    } catch (error) {
+      res.status(400).json({ error: "Failed to update model" });
+    }
+  });
+
+  app.delete("/api/inventory/models/:id", requireAuth, requirePermission('inventory', 'delete'), async (req, res) => {
+    try {
+      const model = await VehicleModel.findByIdAndUpdate(req.params.id, { isActive: false }, { new: true });
+      if (!model) {
+        return res.status(404).json({ error: "Model not found" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      res.status(400).json({ error: "Failed to delete model" });
+    }
+  });
+
+  // Variant Routes
+  app.get("/api/inventory/variants", requireAuth, requirePermission('inventory', 'read'), async (req, res) => {
+    try {
+      const { modelId } = req.query;
+      const query: any = { isActive: true };
+      if (modelId) {
+        query.modelId = modelId;
+      }
+      const variants = await Variant.find(query)
+        .populate('brandId', 'name')
+        .populate('modelId', 'name')
+        .sort({ brandName: 1, modelName: 1, name: 1 });
+      res.json(variants);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch variants" });
+    }
+  });
+
+  app.post("/api/inventory/variants", requireAuth, requirePermission('inventory', 'create'), async (req, res) => {
+    try {
+      const variant = await Variant.create(req.body);
+      
+      await logActivity({
+        userId: (req as any).session.userId,
+        userName: (req as any).session.userName,
+        userRole: (req as any).session.userRole,
+        action: 'create',
+        resource: 'inventory',
+        resourceId: variant._id.toString(),
+        description: `Created variant: ${variant.brandName} ${variant.modelName} ${variant.name}`,
+        ipAddress: req.ip,
+      });
+      
+      res.json(variant);
+    } catch (error) {
+      res.status(400).json({ error: "Failed to create variant" });
+    }
+  });
+
+  app.put("/api/inventory/variants/:id", requireAuth, requirePermission('inventory', 'update'), async (req, res) => {
+    try {
+      const variant = await Variant.findByIdAndUpdate(req.params.id, req.body, { new: true });
+      if (!variant) {
+        return res.status(404).json({ error: "Variant not found" });
+      }
+      res.json(variant);
+    } catch (error) {
+      res.status(400).json({ error: "Failed to update variant" });
+    }
+  });
+
+  app.delete("/api/inventory/variants/:id", requireAuth, requirePermission('inventory', 'delete'), async (req, res) => {
+    try {
+      const variant = await Variant.findByIdAndUpdate(req.params.id, { isActive: false }, { new: true });
+      if (!variant) {
+        return res.status(404).json({ error: "Variant not found" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      res.status(400).json({ error: "Failed to delete variant" });
+    }
+  });
+
+  // Product Category Routes
+  app.get("/api/inventory/categories", requireAuth, requirePermission('inventory', 'read'), async (req, res) => {
+    try {
+      const categories = await ProductCategory.find({ isActive: true }).sort({ name: 1 });
+      res.json(categories);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch categories" });
+    }
+  });
+
+  app.post("/api/inventory/categories", requireAuth, requirePermission('inventory', 'create'), async (req, res) => {
+    try {
+      const category = await ProductCategory.create(req.body);
+      
+      await logActivity({
+        userId: (req as any).session.userId,
+        userName: (req as any).session.userName,
+        userRole: (req as any).session.userRole,
+        action: 'create',
+        resource: 'inventory',
+        resourceId: category._id.toString(),
+        description: `Created category: ${category.name}`,
+        ipAddress: req.ip,
+      });
+      
+      res.json(category);
+    } catch (error) {
+      res.status(400).json({ error: "Failed to create category" });
+    }
+  });
+
+  app.put("/api/inventory/categories/:id", requireAuth, requirePermission('inventory', 'update'), async (req, res) => {
+    try {
+      const category = await ProductCategory.findByIdAndUpdate(req.params.id, req.body, { new: true });
+      if (!category) {
+        return res.status(404).json({ error: "Category not found" });
+      }
+      res.json(category);
+    } catch (error) {
+      res.status(400).json({ error: "Failed to update category" });
+    }
+  });
+
+  app.delete("/api/inventory/categories/:id", requireAuth, requirePermission('inventory', 'delete'), async (req, res) => {
+    try {
+      const category = await ProductCategory.findByIdAndUpdate(req.params.id, { isActive: false }, { new: true });
+      if (!category) {
+        return res.status(404).json({ error: "Category not found" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      res.status(400).json({ error: "Failed to delete category" });
+    }
+  });
+
+  // Product Range Routes
+  app.get("/api/inventory/ranges", requireAuth, requirePermission('inventory', 'read'), async (req, res) => {
+    try {
+      const ranges = await ProductRange.find({ isActive: true }).sort({ name: 1 });
+      res.json(ranges);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch ranges" });
+    }
+  });
+
+  app.post("/api/inventory/ranges", requireAuth, requirePermission('inventory', 'create'), async (req, res) => {
+    try {
+      const range = await ProductRange.create(req.body);
+      
+      await logActivity({
+        userId: (req as any).session.userId,
+        userName: (req as any).session.userName,
+        userRole: (req as any).session.userRole,
+        action: 'create',
+        resource: 'inventory',
+        resourceId: range._id.toString(),
+        description: `Created range: ${range.name}`,
+        ipAddress: req.ip,
+      });
+      
+      res.json(range);
+    } catch (error) {
+      res.status(400).json({ error: "Failed to create range" });
+    }
+  });
+
+  app.put("/api/inventory/ranges/:id", requireAuth, requirePermission('inventory', 'update'), async (req, res) => {
+    try {
+      const range = await ProductRange.findByIdAndUpdate(req.params.id, req.body, { new: true });
+      if (!range) {
+        return res.status(404).json({ error: "Range not found" });
+      }
+      res.json(range);
+    } catch (error) {
+      res.status(400).json({ error: "Failed to update range" });
+    }
+  });
+
+  app.delete("/api/inventory/ranges/:id", requireAuth, requirePermission('inventory', 'delete'), async (req, res) => {
+    try {
+      const range = await ProductRange.findByIdAndUpdate(req.params.id, { isActive: false }, { new: true });
+      if (!range) {
+        return res.status(404).json({ error: "Range not found" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      res.status(400).json({ error: "Failed to delete range" });
+    }
+  });
+
+  // Vendor Routes
+  app.get("/api/inventory/vendors", requireAuth, requirePermission('inventory', 'read'), async (req, res) => {
+    try {
+      const vendors = await Vendor.find({ isActive: true }).sort({ name: 1 });
+      res.json(vendors);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch vendors" });
+    }
+  });
+
+  app.get("/api/inventory/vendors/:id", requireAuth, requirePermission('inventory', 'read'), async (req, res) => {
+    try {
+      const vendor = await Vendor.findById(req.params.id);
+      if (!vendor) {
+        return res.status(404).json({ error: "Vendor not found" });
+      }
+      res.json(vendor);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch vendor" });
+    }
+  });
+
+  app.post("/api/inventory/vendors", requireAuth, requirePermission('inventory', 'create'), async (req, res) => {
+    try {
+      const vendor = await Vendor.create(req.body);
+      
+      await logActivity({
+        userId: (req as any).session.userId,
+        userName: (req as any).session.userName,
+        userRole: (req as any).session.userRole,
+        action: 'create',
+        resource: 'inventory',
+        resourceId: vendor._id.toString(),
+        description: `Created vendor: ${vendor.name}`,
+        ipAddress: req.ip,
+      });
+      
+      res.json(vendor);
+    } catch (error) {
+      res.status(400).json({ error: "Failed to create vendor" });
+    }
+  });
+
+  app.put("/api/inventory/vendors/:id", requireAuth, requirePermission('inventory', 'update'), async (req, res) => {
+    try {
+      const vendor = await Vendor.findByIdAndUpdate(req.params.id, req.body, { new: true });
+      if (!vendor) {
+        return res.status(404).json({ error: "Vendor not found" });
+      }
+      res.json(vendor);
+    } catch (error) {
+      res.status(400).json({ error: "Failed to update vendor" });
+    }
+  });
+
+  app.delete("/api/inventory/vendors/:id", requireAuth, requirePermission('inventory', 'delete'), async (req, res) => {
+    try {
+      const vendor = await Vendor.findByIdAndUpdate(req.params.id, { isActive: false }, { new: true });
+      if (!vendor) {
+        return res.status(404).json({ error: "Vendor not found" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      res.status(400).json({ error: "Failed to delete vendor" });
+    }
+  });
+
+  // Inventory Product Routes
+  app.get("/api/inventory/products", requireAuth, requirePermission('inventory', 'read'), async (req, res) => {
+    try {
+      const { brandId, modelId, variantId, categoryId, status } = req.query;
+      const query: any = { isActive: true };
+      
+      if (brandId) query.brandId = brandId;
+      if (modelId) query.modelId = modelId;
+      if (variantId) query.variantId = variantId;
+      if (categoryId) query.categoryId = categoryId;
+      if (status) query.status = status;
+      
+      const products = await InventoryProduct.find(query)
+        .populate('brandId', 'name')
+        .populate('modelId', 'name')
+        .populate('variantId', 'name')
+        .populate('categoryId', 'name')
+        .populate('rangeId', 'name')
+        .populate('vendorId', 'name mobileNumber')
+        .sort({ brandName: 1, modelName: 1, productName: 1 });
+      
+      res.json(products);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch products" });
+    }
+  });
+
+  app.get("/api/inventory/products/:id", requireAuth, requirePermission('inventory', 'read'), async (req, res) => {
+    try {
+      const product = await InventoryProduct.findById(req.params.id)
+        .populate('brandId', 'name')
+        .populate('modelId', 'name')
+        .populate('variantId', 'name')
+        .populate('categoryId', 'name')
+        .populate('rangeId', 'name')
+        .populate('vendorId');
+      
+      if (!product) {
+        return res.status(404).json({ error: "Product not found" });
+      }
+      
+      res.json(product);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch product" });
+    }
+  });
+
+  app.post("/api/inventory/products", requireAuth, requirePermission('inventory', 'create'), async (req, res) => {
+    try {
+      // Generate SKU if not provided
+      if (!req.body.sku) {
+        const sku = `${req.body.brandName.substring(0, 3).toUpperCase()}-${req.body.categoryName.substring(0, 3).toUpperCase()}-${Date.now()}`;
+        req.body.sku = sku;
+      }
+      
+      const product = await InventoryProduct.create(req.body);
+      
+      await logActivity({
+        userId: (req as any).session.userId,
+        userName: (req as any).session.userName,
+        userRole: (req as any).session.userRole,
+        action: 'create',
+        resource: 'inventory',
+        resourceId: product._id.toString(),
+        description: `Created product: ${product.productName} (${product.sku})`,
+        details: { sku: product.sku, stockQty: product.stockQty },
+        ipAddress: req.ip,
+      });
+      
+      res.json(product);
+    } catch (error) {
+      res.status(400).json({ error: "Failed to create product" });
+    }
+  });
+
+  app.put("/api/inventory/products/:id", requireAuth, requirePermission('inventory', 'update'), async (req, res) => {
+    try {
+      const product = await InventoryProduct.findByIdAndUpdate(req.params.id, req.body, { new: true });
+      if (!product) {
+        return res.status(404).json({ error: "Product not found" });
+      }
+      res.json(product);
+    } catch (error) {
+      res.status(400).json({ error: "Failed to update product" });
+    }
+  });
+
+  app.delete("/api/inventory/products/:id", requireAuth, requirePermission('inventory', 'delete'), async (req, res) => {
+    try {
+      const product = await InventoryProduct.findByIdAndUpdate(req.params.id, { isActive: false }, { new: true });
+      if (!product) {
+        return res.status(404).json({ error: "Product not found" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      res.status(400).json({ error: "Failed to delete product" });
+    }
+  });
+
+  // Stock Management Routes
+  app.post("/api/inventory/stock/deduct", requireAuth, requirePermission('inventory', 'update'), async (req, res) => {
+    try {
+      const result = await StockService.deductStock({
+        ...req.body,
+        performedBy: (req as any).session.userId,
+      });
+      
+      if (!result.success) {
+        return res.status(400).json({ error: result.message });
+      }
+      
+      await logActivity({
+        userId: (req as any).session.userId,
+        userName: (req as any).session.userName,
+        userRole: (req as any).session.userRole,
+        action: 'update',
+        resource: 'inventory',
+        resourceId: req.body.productId,
+        description: `Deducted stock: ${result.product?.productName} (Qty: ${req.body.quantity})`,
+        details: { stockBefore: result.product?.stockBefore, stockAfter: result.product?.stockAfter },
+        ipAddress: req.ip,
+      });
+      
+      res.json(result);
+    } catch (error) {
+      res.status(400).json({ error: "Failed to deduct stock" });
+    }
+  });
+
+  app.post("/api/inventory/stock/add", requireAuth, requirePermission('inventory', 'update'), async (req, res) => {
+    try {
+      const result = await StockService.addStock({
+        ...req.body,
+        performedBy: (req as any).session.userId,
+      });
+      
+      if (!result.success) {
+        return res.status(400).json({ error: result.message });
+      }
+      
+      await logActivity({
+        userId: (req as any).session.userId,
+        userName: (req as any).session.userName,
+        userRole: (req as any).session.userRole,
+        action: 'update',
+        resource: 'inventory',
+        resourceId: req.body.productId,
+        description: `Added stock: ${result.product?.productName} (Qty: ${req.body.quantity})`,
+        details: { stockBefore: result.product?.stockBefore, stockAfter: result.product?.stockAfter },
+        ipAddress: req.ip,
+      });
+      
+      res.json(result);
+    } catch (error) {
+      res.status(400).json({ error: "Failed to add stock" });
+    }
+  });
+
+  app.get("/api/inventory/stock/low", requireAuth, requirePermission('inventory', 'read'), async (req, res) => {
+    try {
+      const lowStockProducts = await StockService.getLowStockProducts();
+      res.json(lowStockProducts);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch low stock products" });
+    }
+  });
+
+  // Stock Movement Routes
+  app.get("/api/inventory/movements", requireAuth, requirePermission('inventory', 'read'), async (req, res) => {
+    try {
+      const { productId, type, startDate, endDate, limit = 100 } = req.query;
+      const query: any = {};
+      
+      if (productId) query.productId = productId;
+      if (type) query.type = type;
+      if (startDate || endDate) {
+        query.transactionDate = {};
+        if (startDate) query.transactionDate.$gte = new Date(startDate as string);
+        if (endDate) query.transactionDate.$lte = new Date(endDate as string);
+      }
+      
+      const movements = await StockMovement.find(query)
+        .populate('productId', 'productName sku')
+        .populate('performedBy', 'name role')
+        .sort({ transactionDate: -1 })
+        .limit(parseInt(limit as string));
+      
+      res.json(movements);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch stock movements" });
+    }
+  });
+
+  app.get("/api/inventory/movements/summary/daily", requireAuth, requirePermission('inventory', 'read'), async (req, res) => {
+    try {
+      const { date } = req.query;
+      const targetDate = date ? new Date(date as string) : new Date();
+      const summary = await StockService.getDailyMovementSummary(targetDate);
+      res.json(summary);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch daily summary" });
+    }
+  });
+
+  app.get("/api/inventory/movements/summary", requireAuth, requirePermission('inventory', 'read'), async (req, res) => {
+    try {
+      const { startDate, endDate } = req.query;
+      
+      if (!startDate || !endDate) {
+        return res.status(400).json({ error: "Start date and end date are required" });
+      }
+      
+      const summary = await StockService.getStockMovementSummary(
+        new Date(startDate as string),
+        new Date(endDate as string)
+      );
+      
+      res.json(summary);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch movement summary" });
     }
   });
 

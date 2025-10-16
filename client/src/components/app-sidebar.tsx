@@ -63,6 +63,7 @@ const mainMenuItems: MenuItem[] = [
   { title: "Vehicles", url: "/vehicles", icon: Car },
   { title: "Products", url: "/products", icon: Package, permission: { resource: "products", action: "read" } },
   { title: "Inventory", url: "/inventory", icon: Warehouse, permission: { resource: "inventory", action: "read" } },
+  { title: "Inventory Management", url: "/inventory-management", icon: Warehouse, permission: { resource: "inventory", action: "read" } },
   { title: "Service Visits", url: "/visits", icon: ClipboardList, permission: { resource: "orders", action: "read" } },
   { title: "Orders", url: "/orders", icon: ShoppingCart, permission: { resource: "orders", action: "read" } },
   { title: "Suppliers", url: "/suppliers", icon: Building2, permission: { resource: "suppliers", action: "read" } },
