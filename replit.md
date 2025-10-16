@@ -20,6 +20,16 @@ The application exclusively uses **MongoDB** with **Mongoose ODM**. A singleton 
 ### Data Models & Schemas
 Core entities include Product (with multi-image support, variants, barcode, compatibility, warranty, and detailed inventory tracking), RegistrationCustomer (with referral source tracking and auto-generated IDs), RegistrationVehicle (linked to customers, with dynamic fields like selected parts and chassis numbers), Employee (with auto-generated IDs, photo upload, status management, and performance logs), ServiceVisit (with before/after image support), Order, InventoryTransaction, ProductReturn, Supplier, PurchaseOrder, Attendance, Leave, Task, CommunicationLog, and Feedback. **Zod** is used for validation schemas for `RegistrationCustomer` and `RegistrationVehicle`. The `isNew` field was renamed to `isNewVehicle` to resolve Mongoose warnings.
 
+### Vehicle Management Module
+A comprehensive vehicle management system that maintains detailed vehicle records per customer with the following features:
+- **Auto-generated Vehicle IDs**: Unique sequential IDs in format VEH001, VEH002, etc., using a Counter model
+- **Enhanced Vehicle Details**: Vehicle brand, model, variant, color, year of purchase, vehicle number (registration plate), VIN number, chassis number, and photo upload
+- **Service Tracking**: Last service date tracking with service history array and warranty records
+- **Service Reminders**: Automated endpoint to identify vehicles needing service (6+ months without maintenance)
+- **Comprehensive API Routes**: Full CRUD operations with filtering by brand/model/variant/color, search by vehicle ID/number/brand/model/VIN, and service reminder automation
+- **Frontend Interface**: Complete vehicle management page with tabs for "All Vehicles" and "Service Reminders", including add/edit/delete functionality, advanced search and filtering, vehicle photo uploads, and customer linking
+- **Route Ordering**: Specific routes (`/api/vehicles/service-reminders`, `/api/vehicles/:id`) are correctly ordered before general routes (`/api/vehicles`) in Express to ensure proper request handling
+
 ### Authentication & Authorization
 The system uses **session-based authentication** with Express sessions and secure HTTP-only cookies. Password hashing is handled by **bcryptjs**. **Role-Based Access Control (RBAC)** defines five distinct roles: Admin, Inventory Manager, Sales Executive, HR Manager, and Service Staff, each with granular permissions. Two-step OTP verification is implemented for login.
 
