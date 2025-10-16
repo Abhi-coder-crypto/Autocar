@@ -20,6 +20,7 @@ import {
   MessageSquare,
   UserPlus,
   ListChecks,
+  Car,
 } from "lucide-react";
 import logoImage from "@assets/image_1760164042662.png";
 import {
@@ -59,6 +60,7 @@ const mainMenuItems: MenuItem[] = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
   { title: "Register Customer", url: "/register-customer", icon: UserPlus },
   { title: "Registration Dashboard", url: "/registration-dashboard", icon: ListChecks },
+  { title: "Vehicles", url: "/vehicles", icon: Car },
   { title: "Products", url: "/products", icon: Package, permission: { resource: "products", action: "read" } },
   { title: "Inventory", url: "/inventory", icon: Warehouse, permission: { resource: "inventory", action: "read" } },
   { title: "Service Visits", url: "/visits", icon: ClipboardList, permission: { resource: "orders", action: "read" } },

@@ -29,6 +29,7 @@ import Leaves from "@/pages/Leaves";
 import Communications from "@/pages/Communications";
 import CustomerRegistration from "@/pages/CustomerRegistration";
 import CustomerRegistrationDashboard from "@/pages/CustomerRegistrationDashboard";
+import Vehicles from "@/pages/Vehicles";
 import { useEffect } from "react";
 import { User } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -40,6 +41,7 @@ const ROUTE_PERMISSIONS: Record<string, { resource: string; action: string } | n
   '/settings': null, // Settings is accessible to all authenticated users
   '/register-customer': null, // Customer registration is accessible to all authenticated users
   '/registration-dashboard': null, // Registration dashboard is accessible to all authenticated users
+  '/vehicles': null, // Vehicle management is accessible to all authenticated users
   '/products': { resource: 'products', action: 'read' },
   '/inventory': { resource: 'inventory', action: 'read' },
   '/orders': { resource: 'orders', action: 'read' },
@@ -155,6 +157,9 @@ function Router() {
       </Route>
       <Route path="/registration-dashboard">
         {() => <ProtectedRoute component={CustomerRegistrationDashboard} />}
+      </Route>
+      <Route path="/vehicles">
+        {() => <ProtectedRoute component={Vehicles} />}
       </Route>
     </Switch>
   );
