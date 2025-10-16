@@ -1834,16 +1834,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ 
         vehicle: {
           id: vehicle._id.toString(),
+          vehicleId: vehicle.vehicleId,
           customerId: vehicle.customerId,
           vehicleNumber: vehicle.vehicleNumber,
           vehicleBrand: vehicle.vehicleBrand,
           vehicleModel: vehicle.vehicleModel,
+          variant: vehicle.variant,
+          color: vehicle.color,
           customModel: vehicle.customModel,
           yearOfPurchase: vehicle.yearOfPurchase,
           vehiclePhoto: vehicle.vehiclePhoto,
           isNewVehicle: vehicle.isNewVehicle,
           chassisNumber: vehicle.chassisNumber,
+          vinNumber: vehicle.vinNumber,
           selectedParts: vehicle.selectedParts,
+          lastServiceDate: vehicle.lastServiceDate,
+          serviceHistory: vehicle.serviceHistory,
+          warrantyRecords: vehicle.warrantyRecords,
           createdAt: vehicle.createdAt,
         },
         customer: {
@@ -1888,12 +1895,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         },
         vehicles: vehicles.map(v => ({
           id: v._id.toString(),
+          vehicleId: v.vehicleId,
           customerId: v.customerId,
           vehicleNumber: v.vehicleNumber,
           vehicleBrand: v.vehicleBrand,
           vehicleModel: v.vehicleModel,
+          variant: v.variant,
+          color: v.color,
           yearOfPurchase: v.yearOfPurchase,
           vehiclePhoto: v.vehiclePhoto,
+          lastServiceDate: v.lastServiceDate,
           createdAt: v.createdAt,
         }))
       });
@@ -1943,12 +1954,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const vehicles = await RegistrationVehicle.find({ customerId: req.params.id });
       res.json(vehicles.map(v => ({
         id: v._id.toString(),
+        vehicleId: v.vehicleId,
         customerId: v.customerId,
         vehicleNumber: v.vehicleNumber,
         vehicleBrand: v.vehicleBrand,
         vehicleModel: v.vehicleModel,
+        variant: v.variant,
+        color: v.color,
         yearOfPurchase: v.yearOfPurchase,
         vehiclePhoto: v.vehiclePhoto,
+        vinNumber: v.vinNumber,
+        lastServiceDate: v.lastServiceDate,
+        serviceHistory: v.serviceHistory,
+        warrantyRecords: v.warrantyRecords,
         createdAt: v.createdAt,
       })));
     } catch (error) {
@@ -1965,12 +1983,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       res.json({
         id: vehicle._id.toString(),
+        vehicleId: vehicle.vehicleId,
         customerId: vehicle.customerId,
         vehicleNumber: vehicle.vehicleNumber,
         vehicleBrand: vehicle.vehicleBrand,
         vehicleModel: vehicle.vehicleModel,
+        variant: vehicle.variant,
+        color: vehicle.color,
         yearOfPurchase: vehicle.yearOfPurchase,
         vehiclePhoto: vehicle.vehiclePhoto,
+        vinNumber: vehicle.vinNumber,
+        lastServiceDate: vehicle.lastServiceDate,
+        serviceHistory: vehicle.serviceHistory,
+        warrantyRecords: vehicle.warrantyRecords,
         createdAt: vehicle.createdAt,
       });
     } catch (error) {
@@ -1985,6 +2010,117 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ success: true });
     } catch (error) {
       res.status(400).json({ error: "Failed to delete vehicle" });
+    }
+  });
+  
+  // Get all vehicles with filtering and search
+  app.get("/api/vehicles", requireAuth, async (req, res) => {
+    try {
+      const { brand, model, variant, color, search } = req.query;
+      const filters: any = {};
+      
+      if (brand) filters.vehicleBrand = brand as string;
+      if (model) filters.vehicleModel = model as string;
+      if (variant) filters.variant = variant as string;
+      if (color) filters.color = color as string;
+      
+      let query = RegistrationVehicle.find(filters);
+      
+      if (search) {
+        const searchRegex = new RegExp(search as string, 'i');
+        query = RegistrationVehicle.find({
+          $or: [
+            { vehicleId: searchRegex },
+            { vehicleNumber: searchRegex },
+            { vehicleBrand: searchRegex },
+            { vehicleModel: searchRegex },
+            { vinNumber: searchRegex },
+          ]
+        });
+      }
+      
+      const vehicles = await query.sort({ createdAt: -1 }).populate('customerId');
+      
+      res.json(vehicles.map(v => ({
+        id: v._id.toString(),
+        vehicleId: v.vehicleId,
+        customerId: v.customerId,
+        vehicleNumber: v.vehicleNumber,
+        vehicleBrand: v.vehicleBrand,
+        vehicleModel: v.vehicleModel,
+        variant: v.variant,
+        color: v.color,
+        yearOfPurchase: v.yearOfPurchase,
+        vehiclePhoto: v.vehiclePhoto,
+        vinNumber: v.vinNumber,
+        lastServiceDate: v.lastServiceDate,
+        serviceHistory: v.serviceHistory,
+        warrantyRecords: v.warrantyRecords,
+        createdAt: v.createdAt,
+      })));
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch vehicles" });
+    }
+  });
+  
+  // Get vehicles needing service reminder (6 months without service)
+  app.get("/api/vehicles/service-reminders", requireAuth, async (req, res) => {
+    try {
+      const sixMonthsAgo = new Date();
+      sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+      
+      const vehicles = await RegistrationVehicle.find({
+        $or: [
+          { lastServiceDate: { $lte: sixMonthsAgo } },
+          { lastServiceDate: null }
+        ]
+      }).populate('customerId');
+      
+      res.json(vehicles.map(v => ({
+        id: v._id.toString(),
+        vehicleId: v.vehicleId,
+        customerId: v.customerId,
+        vehicleNumber: v.vehicleNumber,
+        vehicleBrand: v.vehicleBrand,
+        vehicleModel: v.vehicleModel,
+        lastServiceDate: v.lastServiceDate,
+        daysSinceLastService: v.lastServiceDate 
+          ? Math.floor((Date.now() - new Date(v.lastServiceDate).getTime()) / (1000 * 60 * 60 * 24))
+          : null,
+      })));
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch service reminders" });
+    }
+  });
+  
+  // Get single vehicle details
+  app.get("/api/vehicles/:id", requireAuth, async (req, res) => {
+    try {
+      const vehicle = await RegistrationVehicle.findById(req.params.id).populate('customerId');
+      if (!vehicle) {
+        return res.status(404).json({ error: "Vehicle not found" });
+      }
+      
+      res.json({
+        id: vehicle._id.toString(),
+        vehicleId: vehicle.vehicleId,
+        customerId: vehicle.customerId,
+        vehicleNumber: vehicle.vehicleNumber,
+        vehicleBrand: vehicle.vehicleBrand,
+        vehicleModel: vehicle.vehicleModel,
+        variant: vehicle.variant,
+        color: vehicle.color,
+        yearOfPurchase: vehicle.yearOfPurchase,
+        vehiclePhoto: vehicle.vehiclePhoto,
+        vinNumber: vehicle.vinNumber,
+        chassisNumber: vehicle.chassisNumber,
+        lastServiceDate: vehicle.lastServiceDate,
+        serviceHistory: vehicle.serviceHistory,
+        warrantyRecords: vehicle.warrantyRecords,
+        createdAt: vehicle.createdAt,
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch vehicle" });
     }
   });
   

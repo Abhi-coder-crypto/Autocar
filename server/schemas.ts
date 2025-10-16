@@ -19,12 +19,16 @@ export const insertVehicleSchema = z.object({
   vehicleNumber: z.string().optional(),
   vehicleBrand: z.string().min(1, "Vehicle brand is required"),
   vehicleModel: z.string().min(1, "Vehicle model is required"),
+  variant: z.enum(['Top', 'Base', 'Mid', 'Custom', 'Standard']).optional(),
+  color: z.string().optional(),
   customModel: z.string().optional(),
   yearOfPurchase: z.number().optional(),
   vehiclePhoto: z.string().min(1, "Vehicle photo is required"),
   isNewVehicle: z.boolean().optional(),
   chassisNumber: z.string().optional(),
+  vinNumber: z.string().optional(),
   selectedParts: z.array(z.string()).optional(),
+  lastServiceDate: z.string().optional(),
 });
 
 export type InsertCustomer = z.infer<typeof insertCustomerSchema>;
